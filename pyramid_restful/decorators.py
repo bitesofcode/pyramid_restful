@@ -27,7 +27,7 @@ class endpoint(object):
             return CallableService(name,
                                    callable,
                                    method='GET',
-                                   permission=options.pop('permission', '__DEFAULT__'))
+                                   permission=options.pop('permission', None))
         return setup
 
     @staticmethod
@@ -37,7 +37,7 @@ class endpoint(object):
             return CallableService(name,
                                    callable,
                                    method='POST',
-                                   permission=options.pop('permission', '__DEFAULT__'))
+                                   permission=options.pop('permission', None))
         return setup
 
     @staticmethod
@@ -47,7 +47,7 @@ class endpoint(object):
             return CallableService(name,
                                    callable,
                                    method='DELETE',
-                                   permission=options.pop('permission', '__DEFAULT__'))
+                                   permission=options.pop('permission', None))
         return setup
 
     @staticmethod
@@ -57,7 +57,7 @@ class endpoint(object):
             return CallableService(name,
                                    callable,
                                    method='PUT',
-                                   permission=options.pop('permission', '__DEFAULT__'))
+                                   permission=options.pop('permission', None))
         return setup
 
     @staticmethod
@@ -67,5 +67,5 @@ class endpoint(object):
             return CallableService(name,
                                    callable,
                                    method='PATCH',
-                                   permission=options.pop('permission', '__DEFAULT__'))
+                                   permission=options.pop('permission', None))
         return setup

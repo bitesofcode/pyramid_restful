@@ -28,35 +28,35 @@ class CallableService(object):
     def get(self, **options):
         def setup(callable):
             name = options.pop('name', self.__name__)
-            permission = options.pop('permission', '__DEFAULT__')
+            permission = options.pop('permission')
             return CallableService(name, callable, 'GET', permission)
         return setup
 
     def post(self, **options):
         def setup(callable):
             name = options.pop('name', self.__name__)
-            permission = options.pop('permission', '__DEFAULT__')
+            permission = options.pop('permission')
             return CallableService(name, callable, 'POST', permission)
         return setup
 
     def delete(self, **options):
         def setup(callable):
             name = options.pop('name', self.__name__)
-            permission = options.pop('permission', '__DEFAULT__')
+            permission = options.pop('permission')
             return CallableService(name, callable, 'DELETE', permission)
         return setup
 
     def put(self, **options):
         def setup(callable):
             name = options.pop('name', self.__name__)
-            permission = options.pop('permission', '__DEFAULT__')
+            permission = options.pop('permission')
             return CallableService(name, callable, 'PUT', permission)
         return setup
 
     def patch(self, **options):
         def setup(callable):
             name = options.pop('name', self.__name__)
-            permission = options.pop('permission', '__DEFAULT__')
+            permission = options.pop('permission')
             return CallableService(name, callable, 'PATCH', permission)
         return setup
 
