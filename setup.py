@@ -9,9 +9,9 @@ try:
         content = f.read()
         major = re.search('__major__ = (\d+)', content).group(1)
         minor = re.search('__minor__ = (\d+)', content).group(1)
-        rev = re.search('__revision__ = "(dev\d+)"', content).group(1)
+        rev = re.search('__revision__ = "\d+"', content).group(1)
         version = '.'.join((major, minor, rev))
-        
+
 except StandardError:
      version = '0.0.0'
 
@@ -37,12 +37,12 @@ class tag(Command):
         with open('./pyramid_restful/_version.py', 'w') as f:
             f.write('__major__ = {0}\n'.format(result.group(1)))
             f.write('__minor__ = {0}\n'.format(result.group(2)))
-            f.write('__revision__ = "dev{0}"\n'.format(result.group(3)))
+            f.write('__revision__ = "{0}"\n'.format(result.group(3)))
             f.write('__hash__ = "{0}"'.format(result.group(4)))
 
         # tag this new release version
         if not self.no_tag:
-            version = '.'.join([result.group(1), result.group(2), 'dev' + result.group(3)])
+            version = '.'.join([result.group(1), result.group(2), result.group(3)])
 
             print 'creating git tag:', 'v' + version
 
