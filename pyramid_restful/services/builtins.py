@@ -15,15 +15,10 @@ class CallableService(object):
 
     def __call__(self, request):
         if self.method == request.method:
-            if self.__permission:
-                i = request.registry.introspector.get('authorization policy', None)
-                if i is not None:
-                    policy = i['policy']
-                    if not policy.permits(request.context, request.effective_principals, self.__permission):
-                        raise HTTPForbidden()
-            return self.callable(request)
-        else:
-            raise HTTPBadRequest()
+            if not request.permits(self.__permission):
+                raise HTTPForbidden()
+            else:
+                return self.callable(request)
 
     def get(self, **options):
         def setup(callable):

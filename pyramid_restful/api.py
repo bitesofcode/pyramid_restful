@@ -43,13 +43,10 @@ class ApiFactory(dict):
 
         # otherwise, process the request context
         else:
-            i = request.registry.introspector.get('authorization policy', None)
-            if i is not None:
-                policy = i['policy']
-                if not policy.permits(request.context, request.effective_principals, request.context.permission()):
-                    raise HTTPForbidden()
-
-            return request.context.process()
+            if not request.permits(request.context.permission()):
+                HTTPForbidden()
+            else:
+                return request.context.process()
 
     def register(self, service, name=''):
         """

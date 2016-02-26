@@ -1,22 +1,4 @@
 from .services import CallableService
-from pyramid.httpexceptions import HTTPForbidden
-
-
-def acl(permission):
-    def wrapper(function):
-        def proxy(record, *args, **kwds):
-            ctxt = record.context()
-            r = ctxt.scope.get('request')
-            if r:
-                i = r.registry.introspector.get('authorization policy', None)
-                if i is not None:
-                    policy = i['policy']
-                    if not policy.permits(r.context, r.effective_principals, permission):
-                        raise HTTPForbidden()
-
-            return function(record, *args, **kwds)
-        return proxy
-    return wrapper
 
 
 class endpoint(object):
