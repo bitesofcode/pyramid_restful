@@ -1,0 +1,14 @@
+/src/pyramid_orb/*.pyc
+/.build
+/bin
+/src/build
+/src/dist
+/src/pyramid_orb.egg-info
+
+*.pyc
+build
+pyramid_orb.egg-info
+dist
+_version.py
+.bak
+pyramid_restful.egg-info
