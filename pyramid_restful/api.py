@@ -1,9 +1,8 @@
 import inspect
 import projex.text
 
-from pyramid.httpexceptions import HTTPForbidden
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from .services import *
-from .decorators import *
 
 
 class ApiFactory(dict):
@@ -25,8 +24,14 @@ class ApiFactory(dict):
 
         :return     <pyramid_restful.services.AbstractService>
         """
+        name = name or request.matchdict['traverse'][0]
+
         service = AbstractService(request)
-        for name, (service_type, service_object) in self.__services.items():
+        try:
+            service_type, service_object = self.__services[name]
+        except KeyError:
+            raise HTTPNotFound()
+        else:
             if service_object is None:
                 service[name] = service_type(request, parent=service, name=name)
             else:
@@ -43,7 +48,8 @@ class ApiFactory(dict):
 
         # otherwise, process the request context
         else:
-            if not request.permits(request.context.permission()):
+            permit = request.context.permission()
+            if permit and not request.has_permission(permit):
                 HTTPForbidden()
             else:
                 return request.context.process()

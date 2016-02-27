@@ -59,7 +59,7 @@ setup(
     maintainer='Eric Hulser',
     maintainer_email='eric.hulser@gmail.com',
     description='Library for generating RESTful services with Pyramid.',
-    license='LGPL',
+    license='MIT',
     keywords='',
     url='https://github.com/bitesofcode/pyramid_restful',
     include_package_data=True,

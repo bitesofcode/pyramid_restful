@@ -15,7 +15,7 @@ class CallableService(object):
 
     def __call__(self, request):
         if self.method == request.method:
-            if not request.permits(self.__permission):
+            if self.__permission and not request.has_permission(self.__permission):
                 raise HTTPForbidden()
             else:
                 return self.callable(request)
