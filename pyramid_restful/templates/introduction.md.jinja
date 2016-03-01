@@ -73,12 +73,58 @@ Those objects can be expanded inline with the `expand` request parameter. Object
 expanded are noted in this documentation.  Object references are denoted as "References <type> object", and when
 expanded will return a single object reference.
 
-You can nest expand requests with the dot property. For example, requesting `groups.owner` on a user will expand the
-`groups` property into a full `Group` object, and will then expand the `owner` property on that group into a full
-`User` object.
+You can nest expand requests with the dot property. For example, requesting `type.super_type` on the geometry
+object type from the example would expand the `type` property into the full `GeometryType` object, and will
+then expand the `super_type` property on that into a full `SuperType` object.
 
 You can expand multiple objects at once by identifying multiple items in the expand array, or in a comma-separated
 list of strings to the request.
+
+{example}
+
+### Expanding Object Samples
+
+Say you have a `Geometry object` that references a `GeometryType object` via the `type_id` column.  The
+default response looks like so:
+
+##### Python Code
+
+    import requests
+    url = '{{ url }}/geometry/1234'
+    r = requests.get(url)
+    print r.json()
+
+##### Sample Output
+
+    {
+        'id': 1234,
+        'name': 'Geom12',
+        'type_id': 12
+    }
+
+To get the full `GeometryType object` back, you can simply request it through the `expand` keyword:
+
+##### Python Code
+
+    import requests
+    url = '{{ url }}/geometry/1234'
+    r = requests.get(url, params={'expand': 'type'})
+    print r.json()
+
+##### Sample Output
+
+    {
+        'id': 1234,
+        'name': 'Geom12',
+        'type_id': 12,
+        'type': {
+            'id': 12,
+            'name': 'Sphere',
+            'super_type_id': 1
+        }
+    }
+
+{example}
 
 ### Expanding Collections
 
