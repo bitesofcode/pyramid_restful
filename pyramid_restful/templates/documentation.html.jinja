@@ -1,0 +1,296 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/styles/railscasts.min.css">
+        <title>{{ application }} API Reference</title>
+        <style>
+            body {
+                box-sizing: border-box;
+                background: #fff;
+                color: #4c555a;
+                font-family: Whitney SSm A,Whitney SSm B,Helvetica,Arial,sans-serif;
+                font-size: 14px;
+                font-weight: 500;
+                line-height: 26px;
+                text-transform: none;
+                overflow: hidden;
+                -moz-osx-font-smoothing: grayscale;
+                -webkit-font-smoothing: antialiased;
+                -webkit-text-size-adjust: 100%;
+            }
+            #api-reference {
+                box-sizing: border-box;
+                background: #fff;
+                color: #4c555a;
+                font-family: Whitney SSm A,Whitney SSm B,Helvetica,Arial,sans-serif;
+                font-size: 14px;
+                font-weight: 500;
+                line-height: 26px;
+                text-transform: none;
+                overflow: hidden;
+                -moz-osx-font-smoothing: grayscale;
+                -webkit-font-smoothing: antialiased;
+                -webkit-text-size-adjust: 100%;
+            }
+            #api-reference a {
+                color: #0099e5;
+                text-decoration: none;
+            }
+            #sidebar {
+                bottom: 0;
+                left: 0;
+                position: absolute;
+                top: 0;
+                z-index: 75;
+                width: 220px;
+                background: #fafcfc;
+                border-right: 1px solid #f0f4f7;
+            }
+            #background {
+                bottom: 0;
+                left: 221px;
+                position: fixed;
+                right: 0;
+                top: 0;
+                z-index: 1;
+            }
+            #background-actual {
+                bottom: 0;
+                left: 45%;
+                position: absolute;
+                right: 0;
+                top: 0;
+                background: #2d3134;
+            }
+            #content {
+                bottom: 0;
+                right: 0;
+                position: absolute;
+                left: 221px;
+                top: 0;
+                z-index: 50;
+                box-sizing: border-box;
+                overflow-x: hidden;
+                overflow-y: scroll;
+                -webkit-overflow-scrolling: touch;
+            }
+            #header {
+                left: 221px;
+                position: absolute;
+                right: 0;
+                top: 0;
+                z-index: 100;
+            }
+            .sidebar-nav {
+                bottom: 0;
+                left: 0;
+                position: absolute;
+                right: 0;
+                top: 49px;
+                overflow: scroll;
+            }
+            .method-group {
+                position: relative;
+            }
+            .method-group:before, .method-group:after {
+                position: absolute;
+                top: -1px;
+                z-index: 3;
+                display: block;
+                height: 1px;
+                content: "";
+            }
+            .method-group:before {
+                left: 0;
+                width: 45%;
+                background: #f0f4f7;
+            }
+            .method-group:after {
+                left: 45%;
+                right: 0;
+                background: #33383b;
+            }
+            .method {
+                position: relative;
+                z-index: 2;
+                overflow: hidden;
+            }
+            .method-copy {
+                float: left;
+                padding: 0 0 50px;
+                width: 45%;
+            }
+            .method-copy-padding {
+                padding: 20px 40px;
+            }
+            .method-example {
+                position: relative;
+                z-index: 2;
+                margin-left: 45%;
+                color: #dde4e8;
+            }
+            .method-example-part {
+                padding: 20px 40px;
+            }
+            .header-section {
+                position: absolute;
+                top: 0;
+                box-sizing: border-box;
+                height: 49px;
+            }
+            .header-section-sidebar {
+                left: -221px;
+                z-index: 30;
+                width: 220px;
+                border-bottom: 1px solid #f0f4f7;
+            }
+            .logo {
+                left: 20px;
+                position: relative;
+                top: 14px;
+                height: 22px;
+            }
+            .logo a {
+                color: #0099e5;
+                text-decoration: none;
+            }
+            .logo a:hover {
+                text-decoration: none;
+            }
+            #api-reference h4,
+            #api-reference h5 {
+                margin: 0;
+                color: #292e31;
+                font-family: Whitney SSm A,Whitney SSm B,Helvetica,Arial,sans-serif;
+                font-size: 12px;
+                font-weight: 700;
+                line-height: 18px;
+                text-transform: uppercase;
+            }
+            #api-reference h5 {
+                color: #939da3;
+            }
+            .sidebar-nav-heading {
+                padding: 0 20px 4px;
+            }
+            .sidebar-nav-heading:first-child {
+                padding-top: 20px;
+            }
+            .sidebar-nav-items {
+                margin: 0;
+                padding: 0 0 26px;
+                line-height: 20px;
+                list-style: none;
+            }
+            .sidebar-nav-items li {
+                line-height: 20px;
+                list-style-type: none;
+            }
+            .sidebar-nav-item {
+                display: block;
+                margin: 0;
+                padding: 6px 20px;
+                color: #4c555a;
+                cursor: pointer;
+                font-size: 14px;
+                list-style-type: none;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            #api-reference h1 {
+                font-weight: 400;
+                font-size: 24px;
+                line-height: 32px;
+            }
+            #api-reference h3 {
+                font-weight: 500;
+                font-size: 16px;
+                line-height: 22px;
+            }
+            .method-example code,
+            .method-example pre {
+                color: #d0d0d0;
+                direction: ltr;
+                text-align: left;
+                white-space: pre-wrap;
+                word-break: normal;
+                word-spacing: normal;
+                -moz-tab-size: 4;
+                -o-tab-size: 4;
+                tab-size: 4;
+                -webkit-hyphens: none;
+                -moz-hyphens: none;
+                -ms-hyphens: none;
+                hyphens: none;
+            }
+            .method-example pre {
+                margin: 0;
+                padding: 0px 40px;
+                background: #272b2d;
+                border-radius: 5px;
+                font-family: Source Code Pro,Menlo,monospace;
+                font-size: 14px;
+                line-height: 1.5em;
+                font-weight: 500;
+            }
+            .hljs {
+                background: none;
+            }
+        </style>
+    </head>
+    <body id="api-reference">
+        <div id="header">
+            <div class="header-section header-section-sidebar">
+                <div class="logo">
+                    <strong>{{ application }}</strong> <a href="#">api</a>
+                </div>
+            </div>
+        </div>
+        <div id="sidebar">
+            <nav role="navigation" class="sidebar-nav">
+                {% for section_group in section_groups %}
+                <h5 class="sidebar-nav-heading">{{ section_group.name }}</h5>
+                <ul class="sidebar-nav-items">
+                    {% for section in section_group.sections %}
+                    <li>
+                        <a href="#{{ section.id }}" class="sidebar-nav-item">{{ section.name }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endfor %}
+            </nav>
+        </div>
+        <div id="background">
+            <div id="background-actual"></div>
+        </div>
+        <div id="content">
+            {% for section_group in section_groups %}
+            {% for section in section_group.sections %}
+            <div class="method-group">
+                {% for i, help_content, example_content in section.methods %}
+                <section class="method">
+                    <div class="method-area">
+                        <div class="method-copy">
+                            <div class="method-copy-padding">
+                                {% if i ==0 %}
+                                <h1><a name="{{ section.id }}"></a>{{ section.name }}</h1>
+                                {% endif %}
+                                {{ help_content.replace('{{ url }}', url) }}
+                            </div>
+                        </div>
+                        <div class="method-example">
+                            <div class="method-example-part">
+                                {{ example_content.replace('{{ url }}', url) }}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            {% endfor %}
+        </div>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    </body>
+</html>

@@ -1,0 +1,100 @@
+### API Reference
+
+The {{ application }} API is organized around REST. Our API has predictable, resource-oriented URLs, and uses HTTP response codes
+to indicate API errors. We use built-in HTTP features, like HTTP authentication and HTTP verbs, which are understood by
+off-the-shelf HTTP clients. We support cross-origin resource sharing, allowing you to interact securely with our API
+from a client-side web application (though you should never expose your secret API key in any public website's
+client-side code). JSON is returned by all API responses, including errors, although our API libraries convert
+responses to appropriate language-specific objects.
+
+{example}
+
+### API Endpoint
+
+    '{{ url }}'
+
+{example}
+
+### Errors
+
+{{ application }} uses conventional HTTP response codes to indicate the success or failure of an API request. In general, codes in
+the 2xx range indicate success, codes in the 4xx range indicate an error that failed given the information provided
+(e.g., a required parameter was omitted, a charge failed, etc.), and codes in the 5xx range indicate an error with
+{{ application }}'s servers.
+
+When you do receive an error response, you will have access to the following properties:
+
+##### Attributes
+
+* __type__ : _string_
+* __error__ : _string_
+
+{example}
+
+### HTTP status code Summary
+
+* __200 - OK__ : Everything worked as expected
+* __400 - Bad Request__ : The request was unacceptable, often due to missing a required parameter.
+* __401 - Unauthorized__ : No valid API key provided.
+* __403 - Forbidden__ : Do not have permission to view a resource.
+* __402 - Request Failed__ : The parameters were valid but the request failed.
+* __404 - Not Found__ : The requested resource doesn't exist.
+* __500-599 - Server Error__ : Something went wrong on the application's end.
+
+{example}
+
+### Handling errors
+
+Our API libraries raise exceptions for many reasons, such as a failed charge, invalid parameters, authentication errors,
+and network unavailability. We recommend writing code that gracefully handles all possible API exceptions.
+
+{example}
+
+##### Python Code
+
+    import requests
+    url = '{{ url }}/path/to/resource'
+    r = requests.get(url)
+    if r.status_code == 200:
+        ...
+    elif r.status_code == 401:
+        ...
+    elif r.status_code == 403:
+        ...
+    else:
+        ...
+
+{example}
+
+### Expanding Objects
+
+Many objects contain the ID of a related object in their response properties.
+Those objects can be expanded inline with the `expand` request parameter. Objects that can be
+expanded are noted in this documentation.  Object references are denoted as "References <type> object", and when
+expanded will return a single object reference.
+
+You can nest expand requests with the dot property. For example, requesting `groups.owner` on a user will expand the
+`groups` property into a full `Group` object, and will then expand the `owner` property on that group into a full
+`User` object.
+
+You can expand multiple objects at once by identifying multiple items in the expand array, or in a comma-separated
+list of strings to the request.
+
+### Expanding Collections
+
+In addition to objects, collections can also be expanded inline with the `expand` request parameter.
+Collections are denoted as either a "Collection of <type> objects" for piped collections, or "<type> objects from
+<column>" for reversed collections.  In both cases, a list of <type> objects will be returned.  This parameter is
+available on all API requests, and applies to the response of that request only.
+
+Collections also allow you to expand a few keywords: `ids`, `count`, `first` and `last`.  When one of these keywords
+is provided, the response will be an object vs. a list containing the requested keywords.  If all records are also
+requested, they will be available under the `records` name.
+
+##### Attributes
+
+* __ids__ : _list of record ids for the collection_
+* __count__ : _count of the size of the collection_
+* __first__ : _returns the first available <type> object from the collection_
+* __last__ : _returns the last available <type> object from the collection_
+* __records__ : _returns the full list of expanded records_

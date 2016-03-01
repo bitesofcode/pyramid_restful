@@ -1,20 +1,57 @@
 import inspect
 import projex.text
+import textwrap
 
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
+from pyramid.response import Response
+from pyramid.httpexceptions import HTTPNotFound
+from collections import defaultdict
+
+from .documentation import Documentation, SectionGroup, Section
 from .services import *
 
 
 class ApiFactory(dict):
-    def __init__(self, version='1.0.0', authorization_policy=None):
+    def __init__(self,
+                 version='1.0.0',
+                 application='pyramid_restful',
+                 documentation_package='pyramid_restful',
+                 documentation_folder='templates',
+                 documentation_template='documentation.html.jinja'):
         super(ApiFactory, self).__init__()
 
         # custom properties
-        self.__authorization_policy = authorization_policy
         self.__version = version
+        self.__application = application
+        self.__documentation = Documentation(documentation_package, documentation_folder, documentation_template)
 
         # services
         self.__services = {}
+
+    def application(self):
+        return self.__application
+
+    def collect_documentation(self, name, service_info):
+        service, service_object = service_info
+
+        if issubclass(service, ModuleService):
+            module_name = service_object.__name__.split('.')[-1]
+            group_name = getattr(service_object, '__group__', 'Topics')
+            docs = getattr(service_object, '__doc__', '') or ''
+
+            methods = [(docs, '')]
+
+            for method in vars(service_object).values():
+                if isinstance(method, CallableService):
+                    method_doc = '## {0}\n\n'.format(method.__name__)
+                    method_doc += textwrap.dedent(getattr(method, '__doc__', '')) or ''
+                    methods.append((method_doc, ''))
+
+            section = Section(
+                id=module_name,
+                name=getattr(service_object, '__title__', module_name),
+                methods=methods
+            )
+            yield group_name, section
 
     def factory(self, request, parent=None, name=None):
         """
@@ -24,27 +61,32 @@ class ApiFactory(dict):
 
         :return     <pyramid_restful.services.AbstractService>
         """
-        name = name or request.matchdict['traverse'][0]
-
-        service = AbstractService(request)
-        try:
-            service_type, service_object = self.__services[name]
-        except KeyError:
-            raise HTTPNotFound()
+        # show documentation at the root path
+        if not request.matchdict['traverse']:
+            return {}
         else:
-            if service_object is None:
-                service[name] = service_type(request, parent=service, name=name)
-            else:
-                service[name] = service_type(request, service_object, parent=service, name=name)
+            name = name or request.matchdict['traverse'][0]
 
-        request.api_service = service
-        return service
+            service = AbstractService(request)
+            try:
+                service_type, service_object = self.__services[name]
+            except KeyError:
+                raise HTTPNotFound()
+            else:
+                if service_object is None:
+                    service[name] = service_type(request, parent=service, name=name)
+                else:
+                    service[name] = service_type(request, service_object, parent=service, name=name)
+
+            request.api_service = service
+            return service
 
     def process(self, request):
         # look for a request to the root of the API, this will generate the
         # help information for the system
         if not request.traversed:
-            return {}
+            body = self.__documentation.render(self, request)
+            return Response(body=body)
 
         # otherwise, process the request context
         else:
@@ -93,7 +135,50 @@ class ApiFactory(dict):
 
         request.response.status = '{0} {1}'.format(code, status)
 
-        return {'error': projex.text.nativestring(err)}
+        return {
+            'type': projex.text.underscore(projex.text.underscore(type(err).__name__)),
+            'error': projex.text.nativestring(err)
+        }
+
+    def section_groups(self, request):
+        intro = self.__documentation.introduction(self, request)
+
+        section_group = SectionGroup(
+            name='Introduction',
+            sections=[intro]
+        )
+
+        section_groups = [section_group]
+        sections = defaultdict(list)
+
+        for name, service_info in sorted(self.__services.items()):
+            for group_name, section in self.collect_documentation(name, service_info):
+                sections[group_name].append(section)
+
+        # show topics first
+        topics = sections.pop('Topics', [])
+        if topics:
+            section_groups.append(SectionGroup(
+                name='Topics',
+                sections=topics
+            ))
+
+        # show core resources second
+        resources = sections.pop('Core Resources', [])
+        if resources:
+            section_groups.append(SectionGroup(
+                name='Core Resources',
+                sections=resources
+            ))
+
+        # show all other topics
+        for group_name, sections in sorted(sections.items()):
+            section_groups.append(SectionGroup(
+                name=group_name,
+                sections=sections
+            ))
+
+        return section_groups
 
     def serve(self, config, path, route_name=None, **view_options):
         """
@@ -101,6 +186,7 @@ class ApiFactory(dict):
         """
         route_name = route_name or path.replace('/', '.').strip('.')
         path = path.strip('/') + '/*traverse'
+        self.route_name = route_name
 
         # configure the route and the path
         config.add_route(route_name, path, factory=self.factory)
