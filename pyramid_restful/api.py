@@ -1,4 +1,5 @@
 import inspect
+import logging
 import projex.text
 import textwrap
 
@@ -8,6 +9,8 @@ from collections import defaultdict
 
 from .documentation import Documentation, SectionGroup, Section
 from .services import *
+
+log = logging.getLogger(__name__)
 
 
 class ApiFactory(dict):
@@ -53,6 +56,18 @@ class ApiFactory(dict):
             )
             yield group_name, section
 
+    def cors_setup(self, request):
+        response = Response()
+        if request.is_xhr:
+            response.headerlist = []
+            response.headerlist.extend(
+                (
+                    ('Access-Control-Allow-Origin', '*'),
+                    ('Content-Type', 'application/json')
+                )
+            )
+        return response
+
     def factory(self, request, parent=None, name=None):
         """
         Returns a new service for the given request.
@@ -82,9 +97,12 @@ class ApiFactory(dict):
             return service
 
     def process(self, request):
+        if request.method.lower() == 'options':
+            return self.cors_setup(request)
+
         # look for a request to the root of the API, this will generate the
         # help information for the system
-        if not request.traversed:
+        elif not request.traversed and 'application/json' not in request.accept:
             body = self.__documentation.render(self, request)
             return Response(body=body)
 
@@ -95,6 +113,7 @@ class ApiFactory(dict):
                 HTTPForbidden()
             else:
                 return request.context.process()
+
 
     def register(self, service, name=''):
         """
@@ -130,6 +149,9 @@ class ApiFactory(dict):
 
     def handle_error(self, request):
         err = request.exception
+
+        log.exception(err)
+
         status = getattr(err, 'status', projex.text.pretty(type(err).__name__))
         code = getattr(err, 'code', 500)
 
@@ -185,11 +207,19 @@ class ApiFactory(dict):
         Serves this API from the inputted root path
         """
         route_name = route_name or path.replace('/', '.').strip('.')
-        path = path.strip('/') + '/*traverse'
+        path = path.strip('/') + '*traverse'
+
         self.route_name = route_name
 
         # configure the route and the path
         config.add_route(route_name, path, factory=self.factory)
+        config.add_view(
+            self.handle_error,
+            route_name=route_name,
+            renderer='json2',
+            accept='application/json',
+            context=StandardError
+        )
         config.add_view(
             self.process,
             route_name=route_name,
@@ -197,11 +227,4 @@ class ApiFactory(dict):
             accept='application/json',
             **view_options
         )
-        # config.add_view(
-        #     self.handle_error,
-        #     route_name=route_name,
-        #     renderer='json2',
-        #     accept='application/json',
-        #     context=StandardError
-        # )
 
