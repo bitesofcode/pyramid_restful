@@ -102,9 +102,12 @@ class ApiFactory(dict):
 
         # look for a request to the root of the API, this will generate the
         # help information for the system
-        elif not request.traversed and 'application/json' not in request.accept:
-            body = self.__documentation.render(self, request)
-            return Response(body=body)
+        elif not request.traversed:
+            if 'application/json' not in request.accept.header_value:
+                body = self.__documentation.render(self, request)
+                return Response(body=body)
+            else:
+                return {'version': self.__version}
 
         # otherwise, process the request context
         else:
