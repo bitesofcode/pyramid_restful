@@ -66,7 +66,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         'projex',
-        'pyramid'
+        'pyramid',
+        'markdown',
+        'jinja2'
     ],
     cmdclass={
         'tag': tag

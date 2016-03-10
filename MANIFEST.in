@@ -1,2 +1,2 @@
 include *.md *.txt *.ini *.cfg *.rst
-recursive-include pyramid_orb *.mako *.js *.html *.css *.sass
+recursive-include pyramid_restful *.mako *.js *.html *.css *.sass *.jinja
