@@ -14,11 +14,10 @@ class CallableService(object):
         self.__permission = permission
 
     def __call__(self, request):
-        if self.method == request.method:
-            if self.__permission and not request.has_permission(self.__permission):
-                raise HTTPForbidden()
-            else:
-                return self.callable(request)
+        if self.method.lower() == request.method.lower():
+            return self.callable(request)
+        else:
+            raise HTTPBadRequest()
 
     def get(self, **options):
         def setup(callable):
