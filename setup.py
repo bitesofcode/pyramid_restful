@@ -1,8 +1,10 @@
 import os
 import re
 import subprocess
+import sys
 
 from setuptools import setup, find_packages, Command
+from setuptools.command.test import test as TestCommand
 
 try:
     with open('pyramid_restful/_version.py', 'r') as f:
@@ -14,6 +16,24 @@ try:
 
 except StandardError:
      version = '0.0.0'
+
+class PyTest(TestCommand):
+    user_options = [('pytest-args=', 'a', 'Arguments to pass to py.test')]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.default_options = ['tests/']
+        self.pytest_args = []
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        import pytest
+        errno = pytest.main(self.default_options)
+        sys.exit(errno)
 
 class tag(Command):
     description = 'Command used to release new versions of the website to the internal pypi server.'
@@ -71,7 +91,8 @@ setup(
         'jinja2'
     ],
     cmdclass={
-        'tag': tag
+        'tag': tag,
+        'test': PyTest
     },
     tests_require=[],
     long_description='Library for generating RESTful services with Pyramid.',

@@ -12,3 +12,6 @@ dist
 _version.py
 .bak
 pyramid_restful.egg-info
+.coverage
+report.html
+htmlcov
