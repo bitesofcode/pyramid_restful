@@ -143,6 +143,8 @@ directory called `rest` within your `myproject` directory and add an `__init__.p
     production.ini
     setup.py
 
+** Multiple Endpoints **
+
 Within the `rest.py` file, you will start defining your endpoints.  To do this, you
 use the `endpoint` decorator from the `pyramid_restful` project.
 
@@ -199,6 +201,8 @@ The `endpoint` decorator allows you to define all the common HTTP verbs of a ReS
     @endpoint.patch()
     @endpoint.delete()
 
+** Single Endpoint, multiple verbs **
+
 Each of these decorators corresponds to a particular HTTP request method that can
 be performed.  ReSTful interfaces use these methods to define resource states.  You could
 also define this API like:
@@ -212,7 +216,7 @@ _USER = None
 def login(request):
     return _USER
 
-@login.post()
+@login.endpoint.post()
 def set_login(request):
     username = request.params.get('username')
     _ = request.params.get('password')
@@ -221,7 +225,7 @@ def set_login(request):
     _USER = {'username': username}
     return _USER
 
-@login.delete()
+@login.endpoint.delete()
 def unset_login(request):
     global _USER
     _USER = None
@@ -241,8 +245,130 @@ verbs associated with it.  Usage of the API routes are defined as:
     POST    /api/v1/login
     DELETE  /api/v1/login
 
-This is technically the more "ReSTful" way to define your API.
+This is actually the preferred and more ReSTful way to define your API.
 
 ### Subpaths
 
-You can define additional sub-paths for the API by defining 
+You can define subpaths for your ReST API by using classes or modules to encompass your routes.  As your 
+API becomes larger and more complex, you will want to start grouping endpoints together to make it easier
+to maintain.
+
+** Scoping by class **
+
+The first example is to use a single class for your endpoints.  If we modify our `rest.py` file now to read:
+
+```python
+from pyramid_restful import endpoint
+
+_USER = None
+
+class auth(object):
+    def __init__(self, request):
+        self.request = request
+
+    @endpoint.get()
+    def login(self):
+        return _USER
+
+    @login.endpoint.post()
+    def set_login(self):
+        username = self.request.params.get('username')
+        _ = self.request.params.get('password')
+
+        global _USER
+        _USER = {'username': username}
+        return _USER
+
+    @login.endpoint.delete()
+    def unset_login(self):
+        global _USER
+        _USER = None
+
+
+def includeme(config):
+    api = config.registry.rest_api
+
+    # register various endpoints
+    api.register(auth)
+```
+
+We will now have registered a _scope_ called `auth` which contains the endpoints.  Note, for classes you must
+accept a request parameter in the class constructor and reference it within your endpoints.
+
+The API now looks like:
+
+    GET     /api/v1/auth/login
+    POST    /api/v1/auth/login
+    DELETE  /api/v1/auth/login
+
+** Scoping by module **
+
+Alternatively, it is often useful to break your rest API up into modules.  If we change our file structure
+to be:
+
+    MyProject/
+        myproject/
+            rest/
+                __init__.py
+                auth.py
+            static/
+            templates/
+            __init__.py
+            tests.py
+            views.py
+    CHANGES.txt
+    MANIFEST.in
+    README.txt
+    development.ini
+    production.ini
+    setup.py
+
+We've now removed the `rest.py` module and created a `rest` package with two files: `__init__.py` and `auth.py`.
+
+Inside the `__init__.py` let's add the code:
+
+```python
+from . import auth
+
+def includeme(config):
+    api = config.registry.rest_api
+
+    # register various endpoints
+    api.register(auth)
+```
+
+And inside the `auth.py` file let's add:
+ 
+```python
+from pyramid_restful import endpoint
+
+_USER = None
+
+@endpoint.get()
+def login(request):
+    return _USER
+
+@login.endpoint.post()
+def set_login(request):
+    username = request.params.get('username')
+    _ = request.params.get('password')
+
+    global _USER
+    _USER = {'username': username}
+    return _USER
+
+@login.endpoint.delete()
+def unset_login(request):
+    global _USER
+    _USER = None
+```
+
+In this case, our endpoints will stay the same:
+
+    GET     /api/v1/auth/login
+    POST    /api/v1/auth/login
+    DELETE  /api/v1/auth/login
+
+But instead of being routed through the class named `auth`, it is routed through the module named `auth`.
+
+There is only ever _one_ level of scoping within the `pyramid_restful` API.
