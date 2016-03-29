@@ -22,16 +22,13 @@ class ApiFactory(dict):
                  documentation_template='documentation.html.jinja'):
         super(ApiFactory, self).__init__()
 
-        # custom properties
-        self.__version = version
-        self.__application = application
+        # private properties
         self.__documentation = Documentation(documentation_package, documentation_folder, documentation_template)
 
-        # services
-        self.__services = {}
-
-    def application(self):
-        return self.__application
+        # public properties
+        self.version = version
+        self.application = application
+        self.services = {}
 
     def collect_documentation(self, name, service_info):
         service, service_object = service_info
@@ -89,7 +86,7 @@ class ApiFactory(dict):
 
             service = {}
             try:
-                service_type, service_object = self.__services[name]
+                service_type, service_object = self.services[name]
             except KeyError:
                 raise HTTPNotFound()
             else:
@@ -119,7 +116,7 @@ class ApiFactory(dict):
                 body = self.__documentation.render(self, request)
                 return Response(body=body)
             else:
-                return {'application': self.application(), 'version': self.version()}
+                return {'application': self.application, 'version': self.version}
 
         # otherwise, process the request context
         else:
@@ -153,6 +150,13 @@ class ApiFactory(dict):
                     else:
                         return caller()
 
+            # check if the caller has its own built-in process
+            elif hasattr(caller, 'process'):
+                return caller.process()
+
+            else:
+                raise HTTPNotFound()
+
 
     def register(self, service, name=''):
         """
@@ -160,21 +164,21 @@ class ApiFactory(dict):
         """
         # expose a sub-factory
         if isinstance(service, ApiFactory):
-            self.__services[name] = (service.factory, None)
+            self.services[name] = (service.factory, None)
 
         # expose a module dynamically as a service
         elif inspect.ismodule(service):
             name = name or service.__name__.split('.')[-1]
-            self.__services[name] = (ModuleService, service)
+            self.services[name] = (ModuleService, service)
 
         # expose a class dynamically as a service
         elif inspect.isclass(service):
             name = name or service.__name__
-            self.__services[name] = (ClassService, service)
+            self.services[name] = (ClassService, service)
 
         # expose an endpoint directly
         elif isinstance(getattr(service, 'endpoint', None), Endpoint):
-            self.__services[service.endpoint.name] = (service.endpoint, None)
+            self.services[service.endpoint.name] = (service.endpoint, None)
 
         # expose a service directly
         else:
@@ -206,7 +210,7 @@ class ApiFactory(dict):
         section_groups = [section_group]
         sections = defaultdict(list)
 
-        for name, service_info in sorted(self.__services.items()):
+        for name, service_info in sorted(self.services.items()):
             for group_name, section in self.collect_documentation(name, service_info):
                 sections[group_name].append(section)
 
@@ -250,7 +254,6 @@ class ApiFactory(dict):
             self.handle_error,
             route_name=route_name,
             renderer='json2',
-            accept='application/json',
             context=StandardError
         )
         config.add_view(
@@ -260,5 +263,3 @@ class ApiFactory(dict):
             **view_options
         )
 
-    def version(self):
-        return self.__version
