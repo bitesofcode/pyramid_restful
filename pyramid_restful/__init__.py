@@ -16,7 +16,7 @@ __version_info__ = (__major__, __minor__, __revision__)
 __version__ = '{0}.{1}.{2}'.format(*__version_info__)
 
 
-from .decorators import *
+from .endpoint import *
 
 
 def includeme(config):
@@ -31,7 +31,10 @@ def includeme(config):
     if api_root:
         from .api import ApiFactory
 
-        api = ApiFactory(version=settings.get('restful.api.version', '1.0.0'))
+        api = ApiFactory(
+            application=settings.get('restful.application', 'pyramid_orb'),
+            version=settings.get('restful.api.version', '1.0.0')
+        )
         api.serve(config, api_root, route_name='restful.api')
 
         # store the API instance on the configuration

@@ -63,7 +63,7 @@ class Documentation(object):
 
     def options(self, api, request):
         opts = {
-            'application': api.application(),
+            'application': api.application,
             'url': request.route_url(api.route_name, traverse='').rstrip('/')
         }
         return opts

@@ -4,7 +4,7 @@ import projex.text
 import textwrap
 
 from pyramid.response import Response
-from pyramid.httpexceptions import HTTPNotFound
+from pyramid.httpexceptions import HTTPNotFound, HTTPBadRequest, HTTPForbidden
 from collections import defaultdict
 
 from .documentation import Documentation, SectionGroup, Section
@@ -22,21 +22,23 @@ class ApiFactory(dict):
                  documentation_template='documentation.html.jinja'):
         super(ApiFactory, self).__init__()
 
-        # custom properties
-        self.__version = version
-        self.__application = application
+        # private properties
         self.__documentation = Documentation(documentation_package, documentation_folder, documentation_template)
 
-        # services
-        self.__services = {}
-
-    def application(self):
-        return self.__application
+        # public properties
+        self.version = version
+        self.application = application
+        self.services = {}
 
     def collect_documentation(self, name, service_info):
         service, service_object = service_info
 
-        if issubclass(service, ModuleService):
+        try:
+            is_module = issubclass(service, ModuleService)
+        except StandardError:
+            is_module = False
+
+        if is_module:
             module_name = service_object.__name__.split('.')[-1]
             group_name = getattr(service_object, '__group__', 'Topics')
             docs = getattr(service_object, '__doc__', '') or ''
@@ -44,7 +46,7 @@ class ApiFactory(dict):
             methods = [(docs, '')]
 
             for method in vars(service_object).values():
-                if isinstance(method, CallableService):
+                if isinstance(service, Endpoint):
                     method_doc = '## {0}\n\n'.format(method.__name__)
                     method_doc += textwrap.dedent(getattr(method, '__doc__', '')) or ''
                     methods.append((method_doc, ''))
@@ -82,16 +84,18 @@ class ApiFactory(dict):
         else:
             name = name or request.matchdict['traverse'][0]
 
-            service = AbstractService(request)
+            service = {}
             try:
-                service_type, service_object = self.__services[name]
+                service_type, service_object = self.services[name]
             except KeyError:
                 raise HTTPNotFound()
             else:
-                if service_object is None:
-                    service[name] = service_type(request, parent=service, name=name)
+                if isinstance(service_type, Endpoint):
+                    service[name] = service_type
+                elif service_object is None:
+                    service[name] = service_type(request)
                 else:
-                    service[name] = service_type(request, service_object, parent=service, name=name)
+                    service[name] = service_type(request, service_object)
 
             request.api_service = service
             return service
@@ -103,19 +107,55 @@ class ApiFactory(dict):
         # look for a request to the root of the API, this will generate the
         # help information for the system
         elif not request.traversed:
-            if 'application/json' not in request.accept.header_value:
+            try:
+                accept = request.accept.header_value
+            except StandardError:
+                accept = 'text/html'
+
+            if 'application/json' not in accept:
                 body = self.__documentation.render(self, request)
                 return Response(body=body)
             else:
-                return {'version': self.__version}
+                return {'application': self.application, 'version': self.version}
 
         # otherwise, process the request context
         else:
-            permit = request.context.permission()
-            if permit and not request.has_permission(permit):
-                HTTPForbidden()
+            caller = request.context
+            method = request.method.lower()
+
+            # process an endpoint function
+            if isinstance(caller, Endpoint):
+                method = request.method.lower()
+                try:
+                    permit = caller.permissions[method]
+                    callable = caller.callables[method]
+                except KeyError:
+                    raise HTTPNotFound()
+                else:
+                    print permit, request.has_permission(permit)
+                    if permit and not request.has_permission(permit):
+                        raise HTTPForbidden()
+                    else:
+                        return callable(request)
+
+            # process an endpoint method
+            elif inspect.ismethod(caller) and isinstance(getattr(caller.im_func, 'endpoint', None), Endpoint):
+                try:
+                    permit = caller.im_func.endpoint.permissions[method]
+                except KeyError:
+                    raise HTTPNotFound()
+                else:
+                    if permit and not request.has_permission(permit):
+                        raise HTTPForbidden()
+                    else:
+                        return caller()
+
+            # check if the caller has its own built-in process
+            elif hasattr(caller, 'process'):
+                return caller.process()
+
             else:
-                return request.context.process()
+                raise HTTPNotFound()
 
 
     def register(self, service, name=''):
@@ -124,31 +164,25 @@ class ApiFactory(dict):
         """
         # expose a sub-factory
         if isinstance(service, ApiFactory):
-            self.__services[name] = (service.factory, None)
-
-        # expose a sub-service
-        elif isinstance(service, AbstractService):
-            name = name or service.__name__
-            self.__services[name] = (service, None)
+            self.services[name] = (service.factory, None)
 
         # expose a module dynamically as a service
         elif inspect.ismodule(service):
             name = name or service.__name__.split('.')[-1]
-            self.__services[name] = (ModuleService, service)
+            self.services[name] = (ModuleService, service)
 
         # expose a class dynamically as a service
         elif inspect.isclass(service):
             name = name or service.__name__
-            self.__services[name] = (ClassService, service)
+            self.services[name] = (ClassService, service)
 
-        # expose a function dynamically as a service
-        elif inspect.isfunction(service):
-            name = name or service.__name__
-            self.__services[name] = (FunctionService, service)
+        # expose an endpoint directly
+        elif isinstance(getattr(service, 'endpoint', None), Endpoint):
+            self.services[service.endpoint.name] = (service.endpoint, None)
 
         # expose a service directly
         else:
-            raise StandardError('Invalid service provided.')
+            raise StandardError('Invalid service provide: {0} ({1}).'.format(service, type(service)))
 
     def handle_error(self, request):
         err = request.exception
@@ -176,7 +210,7 @@ class ApiFactory(dict):
         section_groups = [section_group]
         sections = defaultdict(list)
 
-        for name, service_info in sorted(self.__services.items()):
+        for name, service_info in sorted(self.services.items()):
             for group_name, section in self.collect_documentation(name, service_info):
                 sections[group_name].append(section)
 
@@ -220,14 +254,12 @@ class ApiFactory(dict):
             self.handle_error,
             route_name=route_name,
             renderer='json2',
-            accept='application/json',
             context=StandardError
         )
         config.add_view(
             self.process,
             route_name=route_name,
             renderer='json2',
-            accept='application/json',
             **view_options
         )
 
