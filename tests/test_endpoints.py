@@ -35,3 +35,9 @@ def test_all_verbs(basics, pyramid_app):
         func = getattr(pyramid_app, method)
         r = func('/api/v1/test_verbs')
         assert r.status_code == 200
+
+def test_server_error(basics, pyramid_app):
+    r = pyramid_app.post('/api/v1/server_error', expect_errors=True)
+    assert r.status_code == 500
+    assert r.json['type'] == 'server_error'
+    assert r.json['error'] == 'An unknown server error occurred.'

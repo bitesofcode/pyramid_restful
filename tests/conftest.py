@@ -74,6 +74,10 @@ def basics(pyramid_config):
     def test_verb_get(request):
         return {}
 
+    @endpoint.post()
+    def server_error(request):
+        raise StandardError('This is not visible.')
+
     api = pyramid_config.registry.rest_api
 
     api.register(login)
@@ -83,6 +87,7 @@ def basics(pyramid_config):
     api.register(test_put)
     api.register(test_delete)
     api.register(test_get)
+    api.register(server_error)
 
     api.register(test_verbs)
 
