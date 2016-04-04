@@ -194,10 +194,17 @@ class ApiFactory(dict):
 
         request.response.status = '{0} {1}'.format(code, status)
 
-        return {
-            'type': projex.text.underscore(projex.text.underscore(type(err).__name__)),
-            'error': projex.text.nativestring(err)
-        }
+        # for 500 errors, only return server error
+        if code / 100 == 5:
+            return {
+                'type': 'server_error',
+                'error': 'An unknown server error occurred.'
+            }
+        else:
+            return {
+                'type': projex.text.underscore(projex.text.underscore(type(err).__name__)),
+                'error': projex.text.nativestring(err)
+            }
 
     def section_groups(self, request):
         intro = self.__documentation.introduction(self, request)
