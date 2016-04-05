@@ -3,9 +3,10 @@ import logging
 import projex.text
 import textwrap
 
-from pyramid.response import Response
-from pyramid.httpexceptions import HTTPNotFound, HTTPBadRequest, HTTPForbidden
 from collections import defaultdict
+from pyramid.view import view_config
+from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden, HTTPException
+from pyramid.response import Response
 
 from .documentation import Documentation, SectionGroup, Section
 from .services import *
@@ -184,6 +185,8 @@ class ApiFactory(dict):
         else:
             raise StandardError('Invalid service provide: {0} ({1}).'.format(service, type(service)))
 
+    @view_config(context=StandardError, accept='application/json', renderer='json2')
+    @view_config(context=HTTPException, accept='application/json', renderer='json2')
     def handle_error(self, request):
         err = request.exception
 
@@ -251,15 +254,10 @@ class ApiFactory(dict):
         # configure the route and the path
         config.add_route(route_name, path, factory=self.factory)
         config.add_view(
-            self.handle_error,
-            route_name=route_name,
-            renderer='json2',
-            context=StandardError
-        )
-        config.add_view(
             self.process,
             route_name=route_name,
             renderer='json2',
             **view_options
         )
+        config.scan()
 
