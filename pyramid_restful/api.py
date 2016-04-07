@@ -133,7 +133,6 @@ class ApiFactory(dict):
                 except KeyError:
                     raise HTTPNotFound()
                 else:
-                    print permit, request.has_permission(permit)
                     if permit and not request.has_permission(permit):
                         raise HTTPForbidden()
                     else:
