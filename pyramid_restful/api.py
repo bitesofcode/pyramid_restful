@@ -4,7 +4,6 @@ import projex.text
 import textwrap
 
 from collections import defaultdict
-from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden, HTTPException
 from pyramid.response import Response
 
@@ -184,9 +183,29 @@ class ApiFactory(dict):
         else:
             raise StandardError('Invalid service provide: {0} ({1}).'.format(service, type(service)))
 
-    @view_config(context=StandardError, accept='application/json', renderer='json2')
-    @view_config(context=HTTPException, accept='application/json', renderer='json2')
-    def handle_error(self, request):
+    def handle_standard_error(self, request):
+        err = request.exception
+
+        log.exception(err)
+
+        status = getattr(err, 'status', projex.text.pretty(type(err).__name__))
+        code = getattr(err, 'code', 500)
+
+        request.response.status = '{0} {1}'.format(code, status)
+
+        # for 500 errors, only return server error
+        if code / 100 == 5:
+            return {
+                'type': 'server_error',
+                'error': 'An unknown server error occurred.'
+            }
+        else:
+            return {
+                'type': projex.text.underscore(projex.text.underscore(type(err).__name__)),
+                'error': projex.text.nativestring(err)
+            }
+
+    def handle_http_error(self, request):
         err = request.exception
 
         log.exception(err)
@@ -260,10 +279,21 @@ class ApiFactory(dict):
         # configure the route and the path
         config.add_route(route_name, path, factory=self.factory)
         config.add_view(
+            self.handle_standard_error,
+            route_name=route_name,
+            renderer='json2',
+            context=StandardError
+        ),
+        config.add_view(
+            self.handle_http_error,
+            route_name=route_name,
+            renderer='json2',
+            context=HTTPException
+        )
+        config.add_view(
             self.process,
             route_name=route_name,
             renderer='json2',
             **view_options
         )
-        config.scan()
 
