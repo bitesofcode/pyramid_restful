@@ -4,6 +4,7 @@ import projex.text
 import textwrap
 
 from collections import defaultdict
+from pyramid.urldispatch import Route
 from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden, HTTPException
 from pyramid.response import Response
 
@@ -28,6 +29,7 @@ class ApiFactory(dict):
         # public properties
         self.version = version
         self.application = application
+        self.routes = []
         self.services = {}
 
     def collect_documentation(self, name, service_info):
@@ -78,17 +80,29 @@ class ApiFactory(dict):
 
         :return     <pyramid_restful.services.AbstractService>
         """
+        traverse = request.matchdict['traverse']
+
         # show documentation at the root path
-        if not request.matchdict['traverse']:
+        if not traverse:
             return {}
         else:
-            name = name or request.matchdict['traverse'][0]
+            name = name or traverse[0]
 
             service = {}
             try:
                 service_type, service_object = self.services[name]
             except KeyError:
-                raise HTTPNotFound()
+                # look for direct pattern matches
+                traversed = '/' +   '/'.join(traverse)
+
+                for route, endpoint in self.routes:
+                    result = route.match(traversed)
+                    if result is not None:
+                        request.matchdict = result
+                        request.endpoint = endpoint
+                        break
+                else:
+                    raise HTTPNotFound()
             else:
                 if isinstance(service_type, Endpoint):
                     service[name] = service_type
@@ -106,7 +120,7 @@ class ApiFactory(dict):
 
         # look for a request to the root of the API, this will generate the
         # help information for the system
-        elif not request.traversed:
+        elif not (hasattr(request, 'endpoint') or request.traversed):
             try:
                 accept = request.accept.header_value
             except StandardError:
@@ -120,7 +134,7 @@ class ApiFactory(dict):
 
         # otherwise, process the request context
         else:
-            caller = request.context
+            caller = getattr(request, 'endpoint', request.context)
             method = request.method.lower()
 
             # process an endpoint function
@@ -177,7 +191,11 @@ class ApiFactory(dict):
 
         # expose an endpoint directly
         elif isinstance(getattr(service, 'endpoint', None), Endpoint):
-            self.services[service.endpoint.name] = (service.endpoint, None)
+            if service.endpoint.pattern:
+                route = Route('', service.endpoint.pattern)
+                self.routes.append((route, service.endpoint))
+            else:
+                self.services[service.endpoint.name] = (service.endpoint, None)
 
         # expose a service directly
         else:

@@ -1,11 +1,10 @@
-from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
-
 
 class Endpoint(object):
-    def __init__(self, callable, name='', method='get', permission=None):
+    def __init__(self, callable, name='', method='get', permission=None, pattern=None):
         self.name = name or callable.__name__
         self.callables = {}
         self.permissions = {}
+        self.pattern = pattern
         self._setup(callable, method=method, permission=permission)
 
     def _setup(self, callable, method='get', permission=None):
@@ -53,7 +52,6 @@ class endpoint(object):
         def setup(callable):
             Endpoint(callable, method=method, **options)
             return callable
-
         return setup
 
     @staticmethod

@@ -78,6 +78,18 @@ def basics(pyramid_config):
     def server_error(request):
         raise StandardError('This is not visible.')
 
+    @endpoint.get(pattern='/path/to/somewhere')
+    def somewhere(request):
+        return 'somewhere'
+
+    @somewhere.endpoint.post()
+    def creating_somewhere(request):
+        return 'creating somewhere'
+
+    @endpoint.get(pattern='/path/to/somewhere/{id}')
+    def getting_somewhere(request):
+        return 'somewhere {0}'.format(request.matchdict['id'])
+
     api = pyramid_config.registry.rest_api
 
     api.register(login)
@@ -88,6 +100,8 @@ def basics(pyramid_config):
     api.register(test_delete)
     api.register(test_get)
     api.register(server_error)
+    api.register(somewhere)
+    api.register(getting_somewhere)
 
     api.register(test_verbs)
 

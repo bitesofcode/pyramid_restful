@@ -41,3 +41,18 @@ def test_server_error(basics, pyramid_app):
     assert r.status_code == 500
     assert r.json['type'] == 'server_error'
     assert r.json['error'] == 'An unknown server error occurred.'
+
+def test_path_to_somewhere(basics, pyramid_app):
+    r = pyramid_app.get('/api/v1/path/to/somewhere')
+    assert r.status_code == 200
+    assert r.json == 'somewhere'
+
+def test_creating_path_to_somewhere(basics, pyramid_app):
+    r = pyramid_app.post('/api/v1/path/to/somewhere')
+    assert r.status_code == 200
+    assert r.json == 'creating somewhere'
+
+def test_path_to_someid(basics, pyramid_app):
+    r = pyramid_app.get('/api/v1/path/to/somewhere/special')
+    assert r.status_code == 200
+    assert r.json == 'somewhere special'
