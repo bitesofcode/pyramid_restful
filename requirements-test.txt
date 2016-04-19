@@ -1,5 +1,6 @@
 pyyaml==3.11
 pytz==2015.7
+pyramid==1.6.1
 
 pytest==2.6.4
 pytest-cov==2.2.0
