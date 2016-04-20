@@ -182,6 +182,14 @@ class ApiFactory(dict):
         # expose a module dynamically as a service
         elif inspect.ismodule(service):
             name = name or service.__name__.split('.')[-1]
+
+            # exclude endpoints with patterns
+            for obj in vars(service).values():
+                endpoint = getattr(obj, 'endpoint', None)
+                if isinstance(endpoint, Endpoint) and endpoint.pattern:
+                    route = Route('', endpoint.pattern)
+                    self.routes.append((route, endpoint))
+
             self.services[name] = (ModuleService, service)
 
         # expose a class dynamically as a service
