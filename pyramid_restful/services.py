@@ -17,6 +17,15 @@ class ModuleService(object):
             else:
                 raise KeyError
 
+    @classmethod
+    def routes(cls, obj):
+        root = obj.__name__.split('.')[-1]
+        output = {}
+        for value in vars(obj):
+            if isinstance(getattr(value, 'endpoint', None), Endpoint):
+                output['/{0}/{1}'.format(root, value.name)] = ','.join(sorted(value.callables.keys()))
+        return output
+
 
 class ClassService(object):
     def __init__(self, request, cls):
@@ -34,3 +43,11 @@ class ClassService(object):
                 return getattr(self.instance, match.__name__)
             else:
                 raise KeyError
+
+    @classmethod
+    def routes(cls, obj):
+        output = {}
+        for value in vars(obj):
+            if isinstance(getattr(value.im_func, 'endpoint', None), Endpoint):
+                output['/{0}/{1}'.format(root, value.name)] = ','.join(sorted(value.callables.keys()))
+        return output

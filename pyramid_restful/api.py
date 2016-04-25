@@ -115,8 +115,28 @@ class ApiFactory(dict):
             return service
 
     def process(self, request):
+        is_root = bool(not request.traversed)
+        is_json = 'application/json' in request.accept
+        is_get = request.method.lower() == 'get'
+        returning = request.params.get('returning')
+
+
         if request.method.lower() == 'options':
             return self.cors_setup(request)
+
+        # return all available routes from this API
+        elif is_root and is_json and is_get and returning == 'routes':
+            routes = {}
+
+            # show the route paterns
+            for route, service in self.routes:
+                routes[route.pattern] = ','.join(sorted(service.callables.keys()))
+
+            # show the service patterns
+            for service, obj in self.services.values():
+                routes.update(service.routes(obj))
+
+            return routes
 
         # look for a request to the root of the API, this will generate the
         # help information for the system
