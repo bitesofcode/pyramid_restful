@@ -31,11 +31,21 @@ def includeme(config):
     if api_root:
         from .api import ApiFactory
 
+        # setup cross-origin support
+        cors_options = {
+            k.replace('restful.cors.', ''): v
+            for k, v in settings.items()
+            if k.startswith('restful.cors.')
+        }
+
         api = ApiFactory(
             application=settings.get('restful.application', 'pyramid_orb'),
-            version=settings.get('restful.api.version', '1.0.0')
+            version=settings.get('restful.api.version', '1.0.0'),
+            cors_options=cors_options or None
         )
-        api.serve(config, api_root, route_name='restful.api')
+
+        perission = settings.get('restful.api.permission')
+        api.serve(config, api_root, route_name='restful.api', permission=permission)
 
         # store the API instance on the configuration
         config.registry.rest_api = api

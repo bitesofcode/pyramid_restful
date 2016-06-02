@@ -20,7 +20,8 @@ class ApiFactory(dict):
                  application='pyramid_restful',
                  documentation_package='pyramid_restful',
                  documentation_folder='templates',
-                 documentation_template='documentation.html.jinja'):
+                 documentation_template='documentation.html.jinja',
+                 cors_options=None):
         super(ApiFactory, self).__init__()
 
         # private properties
@@ -31,6 +32,8 @@ class ApiFactory(dict):
         self.application = application
         self.routes = []
         self.services = {}
+        self.base_permission = None
+        self.cors_options = cors_options
 
     def collect_documentation(self, name, service_info):
         service, service_object = service_info
@@ -61,16 +64,19 @@ class ApiFactory(dict):
             yield group_name, section
 
     def cors_setup(self, request):
-        response = Response()
-        if request.is_xhr:
-            response.headerlist = []
-            response.headerlist.extend(
-                (
-                    ('Access-Control-Allow-Origin', '*'),
-                    ('Content-Type', 'application/json')
-                )
-            )
-        return response
+        """
+        Sets up the CORS headers response based on the settings used for the API.
+
+        :param request: <pyramid.request.Request>
+        """
+        def cors_headers(response, request):
+            response.headers.update({
+                '-'.join([p.capitalize() for p in k.split('_')]): v
+                for k, v in self.cors_options.items()
+            })
+
+        # setup the CORS supported response
+        request.add_response_callback(cors_headers)
 
     def factory(self, request, parent=None, name=None):
         """
@@ -86,24 +92,27 @@ class ApiFactory(dict):
         if not traverse:
             return {}
         else:
+            service = {}
             name = name or traverse[0]
 
-            service = {}
-            try:
-                service_type, service_object = self.services[name]
-            except KeyError:
-                # look for direct pattern matches
-                traversed = '/' +   '/'.join(traverse)
+            # look for direct pattern matches
+            traversed = '/' + '/'.join(traverse)
+            service_type = None
+            service_object = None
 
-                for route, endpoint in self.routes:
-                    result = route.match(traversed)
-                    if result is not None:
-                        request.matchdict = result
-                        request.endpoint = endpoint
-                        break
-                else:
-                    raise HTTPNotFound()
+            for route, endpoint in self.routes:
+                result = route.match(traversed)
+                if result is not None:
+                    request.matchdict = result
+                    request.endpoint = endpoint
+                    break
             else:
+                try:
+                    service_type, service_object = self.services[name]
+                except KeyError:
+                    raise HTTPNotFound()
+
+            if service_type:
                 if isinstance(service_type, Endpoint):
                     service[name] = service_type
                 elif service_object is None:
@@ -120,37 +129,46 @@ class ApiFactory(dict):
         is_get = request.method.lower() == 'get'
         returning = request.params.get('returning')
 
+        # return the cors setup information for the request
+        if self.cors_options:
+            self.cors_setup(request)
 
         if request.method.lower() == 'options':
-            return self.cors_setup(request)
+            return {}
 
         # return all available routes from this API
         elif is_root and is_json and is_get and returning == 'routes':
-            routes = {}
+            if self.base_permission is None or request.has_permission(self.base_permission):
+                routes = {}
 
-            # show the route paterns
-            for route, service in self.routes:
-                routes[route.pattern] = ','.join(sorted(service.callables.keys()))
+                # show the route paterns
+                for route, service in self.routes:
+                    routes[route.pattern] = ','.join(sorted(service.callables.keys()))
 
-            # show the service patterns
-            for service, obj in self.services.values():
-                routes.update(service.routes(obj))
+                # show the service patterns
+                for service, obj in self.services.values():
+                    routes.update(service.routes(obj))
 
-            return routes
+                return routes
+            else:
+                raise HTTPForbidden()
 
         # look for a request to the root of the API, this will generate the
         # help information for the system
         elif not (hasattr(request, 'endpoint') or request.traversed):
-            try:
-                accept = request.accept.header_value
-            except StandardError:
-                accept = 'text/html'
+            if self.base_permission is None or request.has_permission(self.base_permission):
+                try:
+                    accept = request.accept.header_value
+                except StandardError:
+                    accept = 'text/html'
 
-            if 'application/json' not in accept:
-                body = self.__documentation.render(self, request)
-                return Response(body=body)
+                if 'application/json' not in accept:
+                    body = self.__documentation.render(self, request)
+                    return Response(body=body)
+                else:
+                    return {'application': self.application, 'version': self.version}
             else:
-                return {'application': self.application, 'version': self.version}
+                raise HTTPForbidden()
 
         # otherwise, process the request context
         else:
@@ -313,7 +331,7 @@ class ApiFactory(dict):
 
         return section_groups
 
-    def serve(self, config, path, route_name=None, **view_options):
+    def serve(self, config, path, route_name=None, permission=None, **view_options):
         """
         Serves this API from the inputted root path
         """
@@ -321,6 +339,7 @@ class ApiFactory(dict):
         path = path.strip('/') + '*traverse'
 
         self.route_name = route_name
+        self.base_permission = permission
 
         # configure the route and the path
         config.add_route(route_name, path, factory=self.factory)
