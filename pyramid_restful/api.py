@@ -205,9 +205,9 @@ class ApiFactory(dict):
                     else:
                         if action and hasattr(caller, action):
                             # Bind action function to the caller's instance.
-                            # The action function is not bound at the
-                            # time the endpoint decorator is applied, so
-                            # we need to bind it here.
+                            # The action method is not bound at the time the 
+                            # endpoint decorator is applied, so we bind it
+                            # here.
                             caller = partial(getattr(caller, action),
                                              caller.im_self)
                         return caller()
