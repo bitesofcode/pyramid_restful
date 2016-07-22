@@ -1,3 +1,4 @@
+from functools import partial
 import inspect
 import logging
 import projex.text
@@ -188,7 +189,7 @@ class ApiFactory(dict):
                     if permit and not request.has_permission(permit):
                         raise HTTPForbidden()
                     else:
-                        if action:
+                        if action and hasattr(callable, action):
                             callable = getattr(callable, action)
                         return callable(request)
 
@@ -202,8 +203,13 @@ class ApiFactory(dict):
                     if permit and not request.has_permission(permit):
                         raise HTTPForbidden()
                     else:
-                        if action:
-                            callable = getattr(callable, action)
+                        if action and hasattr(caller, action):
+                            # Bind action function to the caller's instance.
+                            # The action function is not bound at the
+                            # time the endpoint decorator is applied, so
+                            # we need to bind it here.
+                            caller = partial(getattr(caller, action),
+                                             caller.im_self)
                         return caller()
 
             # check if the caller has its own built-in process

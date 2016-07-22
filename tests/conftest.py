@@ -138,6 +138,10 @@ def classes(pyramid_config):
             global _USER
             _USER = None
 
+        @login.endpoint.action()
+        def reset(self):
+            return 'reset'
+
     api = pyramid_config.registry.rest_api
     api.register(auth)
     return api
