@@ -174,6 +174,7 @@ class ApiFactory(dict):
         else:
             caller = getattr(request, 'endpoint', request.context)
             method = request.method.lower()
+            action = request.params.get('action')
 
             # process an endpoint function
             if isinstance(caller, Endpoint):
@@ -187,6 +188,8 @@ class ApiFactory(dict):
                     if permit and not request.has_permission(permit):
                         raise HTTPForbidden()
                     else:
+                        if action:
+                            callable = getattr(callable, action)
                         return callable(request)
 
             # process an endpoint method
@@ -199,6 +202,8 @@ class ApiFactory(dict):
                     if permit and not request.has_permission(permit):
                         raise HTTPForbidden()
                     else:
+                        if action:
+                            callable = getattr(callable, action)
                         return caller()
 
             # check if the caller has its own built-in process

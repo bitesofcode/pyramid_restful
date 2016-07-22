@@ -86,6 +86,10 @@ def basics(pyramid_config):
     def creating_somewhere(request):
         return 'creating somewhere'
 
+    @somewhere.endpoint.action(method='post')
+    def run(request):
+        return 'run action'
+
     @endpoint.get(pattern='/path/to/somewhere/{id}')
     def getting_somewhere(request):
         return 'somewhere {0}'.format(request.matchdict['id'])
