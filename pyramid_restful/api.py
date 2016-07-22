@@ -1,3 +1,4 @@
+from functools import partial
 import inspect
 import logging
 import projex.text
@@ -174,6 +175,7 @@ class ApiFactory(dict):
         else:
             caller = getattr(request, 'endpoint', request.context)
             method = request.method.lower()
+            action = request.params.get('action')
 
             # process an endpoint function
             if isinstance(caller, Endpoint):
@@ -187,6 +189,8 @@ class ApiFactory(dict):
                     if permit and not request.has_permission(permit):
                         raise HTTPForbidden()
                     else:
+                        if action and hasattr(callable, action):
+                            callable = getattr(callable, action)
                         return callable(request)
 
             # process an endpoint method
@@ -199,6 +203,13 @@ class ApiFactory(dict):
                     if permit and not request.has_permission(permit):
                         raise HTTPForbidden()
                     else:
+                        if action and hasattr(caller, action):
+                            # Bind action function to the caller's instance.
+                            # The action method is not bound at the time the 
+                            # endpoint decorator is applied, so we bind it
+                            # here.
+                            caller = partial(getattr(caller, action),
+                                             caller.im_self)
                         return caller()
 
             # check if the caller has its own built-in process

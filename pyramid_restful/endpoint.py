@@ -1,19 +1,37 @@
 
 class Endpoint(object):
-    def __init__(self, callable, name='', method='get', permission=None, pattern=None):
+
+    def __init__(self, callable, name='', method='get', permission=None, pattern=None, action=None):
         self.name = name or callable.__name__
         self.callables = {}
         self.permissions = {}
         self.pattern = pattern
         self._setup(callable, method=method, permission=permission)
 
-    def _setup(self, callable, method='get', permission=None):
-        self.callables[method.lower()] = callable
-        self.permissions[method.lower()] = permission
+    def _setup(self, callable, method='get', permission=None, action=None):
 
+        if action:
+            setattr(self.callables[method.lower()], action, callable)
+
+        else:
+            self.callables[method.lower()] = callable
+
+        self.permissions[method.lower()] = permission
         callable.endpoint = self
 
         return callable
+
+    def action(self, name=None, permission=None, method='get'):
+        def setup(callable):
+            if name is None:
+                action_name = callable.__name__
+            else:
+                action_name = name
+            return self._setup(callable,
+                               method=method,
+                               permission=permission,
+                               action=action_name)
+        return setup
 
     def method(self, method='get', permission=None):
         def setup(callable):
@@ -47,6 +65,19 @@ class Endpoint(object):
 
 
 class endpoint(object):
+
+    @staticmethod
+    def action(method='get', name=None, **options):
+
+        def setup(callable):
+            if name is None:
+                action_name = callable.__name__
+            else:
+                action_name = name
+            Endpoint(callable, action=action_name, method=method, **options)
+            return callable
+        return setup
+
     @staticmethod
     def method(method='get', **options):
         def setup(callable):

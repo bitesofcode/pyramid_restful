@@ -44,7 +44,7 @@ def includeme(config):
             cors_options=cors_options or None
         )
 
-        perission = settings.get('restful.api.permission')
+        permission = settings.get('restful.api.permission')
         api.serve(config, api_root, route_name='restful.api', permission=permission)
 
         # store the API instance on the configuration

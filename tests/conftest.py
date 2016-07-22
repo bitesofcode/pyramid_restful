@@ -86,6 +86,10 @@ def basics(pyramid_config):
     def creating_somewhere(request):
         return 'creating somewhere'
 
+    @somewhere.endpoint.action(method='post')
+    def run(request):
+        return 'run action'
+
     @endpoint.get(pattern='/path/to/somewhere/{id}')
     def getting_somewhere(request):
         return 'somewhere {0}'.format(request.matchdict['id'])
@@ -133,6 +137,10 @@ def classes(pyramid_config):
         def unset_login(self):
             global _USER
             _USER = None
+
+        @login.endpoint.action()
+        def reset(self):
+            return 'reset'
 
     api = pyramid_config.registry.rest_api
     api.register(auth)
