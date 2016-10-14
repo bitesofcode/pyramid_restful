@@ -254,9 +254,25 @@ class ApiFactory(dict):
             else:
                 self.services[service.endpoint.name] = (service.endpoint, None)
 
+        # expose a scope
+        elif isinstance(service, dict):
+            for srv in service.values():
+                try:
+                    self.register(srv)
+                except RuntimeError:
+                    pass
+
+        # expose a list of services
+        elif isinstance(service, list):
+            for srv in service:
+                try:
+                    self.register(srv)
+                except RuntimeError:
+                    pass
+
         # expose a service directly
         else:
-            raise StandardError('Invalid service provide: {0} ({1}).'.format(service, type(service)))
+            raise RuntimeError('Invalid service provide: {0} ({1}).'.format(service, type(service)))
 
     def handle_standard_error(self, request):
         err = request.exception
