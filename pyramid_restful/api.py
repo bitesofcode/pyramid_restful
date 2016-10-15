@@ -157,19 +157,16 @@ class ApiFactory(dict):
         # look for a request to the root of the API, this will generate the
         # help information for the system
         elif not (hasattr(request, 'endpoint') or request.traversed):
-            if self.base_permission is None or request.has_permission(self.base_permission):
-                try:
-                    accept = request.accept.header_value
-                except StandardError:
-                    accept = 'text/html'
+            try:
+                accept = request.accept.header_value
+            except StandardError:
+                accept = 'text/html'
 
-                if 'application/json' not in accept:
-                    body = self.__documentation.render(self, request)
-                    return Response(body=body)
-                else:
-                    return {'application': self.application, 'version': self.version}
+            if 'application/json' not in accept:
+                body = self.__documentation.render(self, request)
+                return Response(body=body)
             else:
-                raise HTTPForbidden()
+                return {'application': self.application, 'version': self.version}
 
         # otherwise, process the request context
         else:
