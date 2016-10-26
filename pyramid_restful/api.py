@@ -6,7 +6,7 @@ import textwrap
 
 from collections import defaultdict
 from pyramid.urldispatch import Route
-from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden, HTTPException
+from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden, HTTPException, HTTPBadRequest
 from pyramid.response import Response
 
 from .documentation import Documentation, SectionGroup, Section
@@ -70,11 +70,15 @@ class ApiFactory(dict):
 
         :param request: <pyramid.request.Request>
         """
-        def cors_headers(response, request):
-            response.headers.update({
-                '-'.join([p.capitalize() for p in k.split('_')]): v
-                for k, v in self.cors_options.items()
-            })
+        def cors_headers(request, response):
+            if request.method.lower() == 'options':
+                response.headers.update({
+                    '-'.join([p.capitalize() for p in k.split('_')]): v
+                    for k, v in self.cors_options.items()
+                })
+            else:
+                origin = self.cors_options.get('access_control_allow_origin', '*')
+                response.headers['Access-Control-Allow-Origin'] = origin
 
         # setup the CORS supported response
         request.add_response_callback(cors_headers)
@@ -124,35 +128,39 @@ class ApiFactory(dict):
             request.api_service = service
             return service
 
+    def get_custom_return(self, request, returning):
+        if returning == 'routes':
+            routes = {}
+
+            # show the route paterns
+            for route, service in self.routes:
+                routes[route.pattern] = ','.join(sorted(service.callables.keys()))
+
+            # show the service patterns
+            for service, obj in self.services.values():
+                routes.update(service.routes(obj))
+
+            return routes
+        else:
+            raise HTTPBadRequest()
+
     def process(self, request):
         is_root = bool(not request.traversed)
         is_json = 'application/json' in request.accept
         is_get = request.method.lower() == 'get'
         returning = request.params.get('returning')
 
-        # return the cors setup information for the request
+        # setup cors response for request
         if self.cors_options:
             self.cors_setup(request)
 
+        # return blank response for an options request
         if request.method.lower() == 'options':
             return {}
 
         # return all available routes from this API
-        elif is_root and is_json and is_get and returning == 'routes':
-            if self.base_permission is None or request.has_permission(self.base_permission):
-                routes = {}
-
-                # show the route paterns
-                for route, service in self.routes:
-                    routes[route.pattern] = ','.join(sorted(service.callables.keys()))
-
-                # show the service patterns
-                for service, obj in self.services.values():
-                    routes.update(service.routes(obj))
-
-                return routes
-            else:
-                raise HTTPForbidden()
+        elif is_root and is_json and is_get and returning:
+            return self.get_custom_return(request, returning)
 
         # look for a request to the root of the API, this will generate the
         # help information for the system
