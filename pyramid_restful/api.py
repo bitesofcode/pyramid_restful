@@ -78,7 +78,10 @@ class ApiFactory(dict):
                 })
             else:
                 origin = self.cors_options.get('access_control_allow_origin', '*')
+                expose_headers = self.cors_options.get('access_control_expose_headers', '')
                 response.headers['Access-Control-Allow-Origin'] = origin
+                if expose_headers:
+                    response.headers['Access-Control-Expose-Headers'] = expose_headers
 
         # setup the CORS supported response
         request.add_response_callback(cors_headers)
@@ -210,7 +213,7 @@ class ApiFactory(dict):
                     else:
                         if action and hasattr(caller, action):
                             # Bind action function to the caller's instance.
-                            # The action method is not bound at the time the 
+                            # The action method is not bound at the time the
                             # endpoint decorator is applied, so we bind it
                             # here.
                             caller = partial(getattr(caller, action),
@@ -393,4 +396,3 @@ class ApiFactory(dict):
             renderer='json2',
             **view_options
         )
-
