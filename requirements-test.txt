@@ -1,4 +1,4 @@
-pyyaml==3.11
+pyyaml==5.4
 pytz==2015.7
 pyramid==1.6.1
 
